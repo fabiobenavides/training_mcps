@@ -41,6 +41,25 @@ cd 01-currency-converter/client
 uv run python client.py
 ```
 
+### If `uv` is not recognized (Windows)
+
+`uv` installs to `%USERPROFILE%\.local\bin`. That folder is on your user `PATH`, but **terminals opened before the install** will not see it yet.
+
+Refresh PATH in the current PowerShell session:
+
+```powershell
+$env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
+uv run python .\client.py
+```
+
+Or open a **new** terminal and run `uv` again.
+
+Without `uv` (after `uv sync` has already created `.venv`):
+
+```powershell
+.\.venv\Scripts\python.exe .\client.py
+```
+
 The client will:
 
 1. Start `../server/server.py` over **stdio** (`uv run` when available).
