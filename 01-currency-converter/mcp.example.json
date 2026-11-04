@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "currency-converter": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "C:/training/training_mcps/01-currency-converter/server",
+        "python",
+        "server.py"
+      ]
+    }
+  }
+}

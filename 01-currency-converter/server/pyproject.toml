@@ -1,0 +1,8 @@
+[project]
+name = "currency-converter"
+version = "0.1.0"
+description = "MCP server that converts amounts between currencies using fixed demo rates"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]",
+]
