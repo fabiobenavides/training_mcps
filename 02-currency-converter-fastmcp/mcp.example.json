@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "currency-converter-fastmcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "C:/training/training_mcps/02-currency-converter-fastmcp/server",
+        "python",
+        "server.py"
+      ]
+    }
+  }
+}

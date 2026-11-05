@@ -1,0 +1,8 @@
+[project]
+name = "currency-converter-fastmcp-client"
+version = "0.1.0"
+description = "Python MCP client for the currency-converter FastMCP lab server"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]",
+]
