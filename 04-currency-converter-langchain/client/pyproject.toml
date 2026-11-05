@@ -1,0 +1,9 @@
+[project]
+name = "currency-converter-langchain-client"
+version = "0.1.0"
+description = "LangChain agent client that calls the currency-converter MCP server"
+requires-python = ">=3.11"
+dependencies = [
+    "langchain[mcp]>=1.4.0",
+    "langchain-openai",
+]

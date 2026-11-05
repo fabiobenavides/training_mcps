@@ -1,0 +1,8 @@
+[project]
+name = "currency-converter-cursor-sdk"
+version = "0.1.0"
+description = "FastMCP currency-converter server for the Cursor SDK lab"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp",
+]

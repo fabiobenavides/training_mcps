@@ -1,0 +1,8 @@
+[project]
+name = "currency-converter-cursor-sdk-client"
+version = "0.1.0"
+description = "Cursor SDK agent client that calls the currency-converter MCP server"
+requires-python = ">=3.11"
+dependencies = [
+    "cursor-sdk",
+]
