@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import shutil
@@ -9,8 +10,9 @@ import sys
 from pathlib import Path
 
 from cursor_sdk import (
-    Agent,
     AgentOptions,
+    AsyncAgent,
+    AsyncClient,
     CursorAgentError,
     LocalAgentOptions,
     StdioMcpServerConfig,
@@ -68,7 +70,7 @@ def _print_tool_call(message) -> None:
         print(f"  result={json.dumps(message.result, default=str)}")
 
 
-def main() -> None:
+async def _run() -> int:
     api_key = os.environ.get("CURSOR_API_KEY", "").strip()
     if not api_key:
         print(
@@ -76,48 +78,58 @@ def main() -> None:
             "https://cursor.com/dashboard/integrations and export it.",
             file=sys.stderr,
         )
-        sys.exit(1)
+        return 1
 
     mcp_server = _stdio_server_config()
     print(f"MCP stdio: {mcp_server.command} {' '.join(mcp_server.args or [])}")
     print(f"Prompt: {PROMPT}\n")
 
+    # AsyncClient avoids the sync Bridge.launch path, which fails on native
+    # Windows (WinError 10038: selectors.select on pipe handles).
     try:
-        with Agent.create(
-            AgentOptions(
-                api_key=api_key,
-                model="composer-2.5",
-                local=LocalAgentOptions(cwd=str(LAB_DIR)),
-                mcp_servers={"currency": mcp_server},
-            )
-        ) as agent:
-            print(f"agent_id={agent.agent_id}")
-            run = agent.send(PROMPT)
-            print(f"run_id={run.id}")
+        async with await AsyncClient.launch_bridge(workspace=str(LAB_DIR)) as client:
+            async with await AsyncAgent.create(
+                AgentOptions(
+                    api_key=api_key,
+                    model="composer-2.5",
+                    local=LocalAgentOptions(cwd=str(LAB_DIR)),
+                    mcp_servers={"currency": mcp_server},
+                ),
+                client=client,
+            ) as agent:
+                print(f"agent_id={agent.agent_id}")
+                run = await agent.send(PROMPT)
+                print(f"run_id={run.id}")
 
-            for message in run.messages():
-                if message.type == "assistant":
-                    for block in message.message.content:
-                        if getattr(block, "type", None) == "text":
-                            print(block.text, end="", flush=True)
-                elif message.type == "tool_call":
-                    _print_tool_call(message)
-                elif message.type == "status":
-                    print(f"\n[status] {message.status}")
+                async for message in run.messages():
+                    if message.type == "assistant":
+                        for block in message.message.content:
+                            if getattr(block, "type", None) == "text":
+                                print(block.text, end="", flush=True)
+                    elif message.type == "tool_call":
+                        _print_tool_call(message)
+                    elif message.type == "status":
+                        print(f"\n[status] {message.status}")
 
-            result = run.wait()
-            print(f"\n\n=== run status: {result.status} ===")
-            if result.result:
-                print(result.result)
-            if result.status == "error":
-                print("Run started but failed.", file=sys.stderr)
-                sys.exit(2)
+                result = await run.wait()
+                print(f"\n\n=== run status: {result.status} ===")
+                if result.result:
+                    print(result.result)
+                if result.status == "error":
+                    print("Run started but failed.", file=sys.stderr)
+                    return 2
     except CursorAgentError as err:
         print(
             f"startup failed: {err.message}, retryable={err.is_retryable}",
             file=sys.stderr,
         )
-        sys.exit(1)
+        return 1
+
+    return 0
+
+
+def main() -> None:
+    sys.exit(asyncio.run(_run()))
 
 
 if __name__ == "__main__":

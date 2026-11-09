@@ -79,4 +79,5 @@ The client will:
 - Rates are hardcoded for learning; they are **not** live market data.
 - Do not write to **stdout** in the server process. MCP uses stdio as the wire protocol; use `logging` (stderr) instead.
 - This lab uses a **local** agent only (no cloud). Model: `composer-2.5`.
+- The client uses the **async** SDK (`AsyncClient` + `AsyncAgent`). On native Windows, the sync `Agent.create` / `Bridge.launch` path raises `OSError: [WinError 10038]` because discovery waits on a stderr pipe with `selectors.select()` (sockets only on Windows). Async avoids that path.
 - You do **not** implement the tool loop yourself — that is Cursor’s job. LangChain is the wrong abstraction for calling the Cursor Agent API.
