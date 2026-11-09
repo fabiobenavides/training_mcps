@@ -24,6 +24,8 @@ SERVER_SCRIPT = SERVER_DIR / "server.py"
 
 PROMPT = "Convert 50 USD to MXN using the available tools. Do not invent exchange rates."
 DEFAULT_MODEL = "openai:gpt-4.1-mini"
+# Hard ceiling so a stalled Gemini free-tier call fails instead of hanging forever.
+INVOKE_TIMEOUT_SECONDS = 90.0
 
 
 def _server_launch() -> tuple[str, list[str]]:
@@ -106,12 +108,35 @@ def _print_message(message: Any) -> None:
         print(text)
 
 
+def _resolve_model(model: str) -> Any:
+    """Build a chat model, with timeouts for Gemini free-tier stalls."""
+    if model.startswith("google_genai:"):
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        return ChatGoogleGenerativeAI(
+            model=model.split(":", 1)[1],
+            timeout=60.0,
+            max_retries=1,
+        )
+    return model
+
+
 async def main() -> None:
     model = os.environ.get("LAB_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
     if model.startswith("openai:") and not os.environ.get("OPENAI_API_KEY", "").strip():
         print(
             "OPENAI_API_KEY is required for the default model "
             f"({DEFAULT_MODEL}). Export it, or set LAB_MODEL to another provider.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if model.startswith("google_genai:") and not (
+        os.environ.get("GOOGLE_API_KEY", "").strip()
+        or os.environ.get("GEMINI_API_KEY", "").strip()
+    ):
+        print(
+            "GOOGLE_API_KEY (or GEMINI_API_KEY) is required for Gemini models. "
+            "Create a key at https://aistudio.google.com/apikey",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -131,8 +156,14 @@ async def main() -> None:
             description = getattr(tool, "description", "") or ""
             print(f"- {name}: {description}")
 
+        # Gemini ignores JSON Schema `additionalProperties`; harmless noise.
+        warnings.filterwarnings(
+            "ignore",
+            message=r"Key 'additionalProperties' is not supported in schema.*",
+        )
+
         agent = create_agent(
-            model,
+            _resolve_model(model),
             tools,
             system_prompt=(
                 "You are a helpful assistant. Use the currency MCP tools for "
@@ -140,9 +171,40 @@ async def main() -> None:
             ),
         )
 
-        result = await agent.ainvoke(
-            {"messages": [{"role": "user", "content": PROMPT}]}
+        print(
+            f"\nCalling model (timeout {INVOKE_TIMEOUT_SECONDS:.0f}s). "
+            "A long pause here is waiting on the LLM API, not MCP."
         )
+        try:
+            result = await asyncio.wait_for(
+                agent.ainvoke(
+                    {"messages": [{"role": "user", "content": PROMPT}]}
+                ),
+                timeout=INVOKE_TIMEOUT_SECONDS,
+            )
+        except TimeoutError:
+            print(
+                f"Timed out after {INVOKE_TIMEOUT_SECONDS:.0f}s waiting for the model. "
+                "Gemini free tier is often slow or overloaded (503 / ReadTimeout). "
+                "Retry later, or try another Flash model from AI Studio "
+                "(e.g. google_genai:gemini-3.5-flash-lite).",
+                file=sys.stderr,
+            )
+            sys.exit(3)
+        except Exception as err:
+            # Surface Gemini capacity errors without a huge LangGraph stack.
+            err_text = str(err)
+            if "503" in err_text or "high demand" in err_text.lower():
+                print(
+                    "Gemini returned 503 (high demand / free-tier overload). "
+                    "This is Google capacity, not an MCP bug. Retry later, or set "
+                    'LAB_MODEL to another free model, e.g. '
+                    '"google_genai:gemini-3.5-flash-lite" or '
+                    '"google_genai:gemini-3.6-flash".',
+                    file=sys.stderr,
+                )
+                sys.exit(3)
+            raise
 
     messages = result.get("messages", []) if isinstance(result, dict) else []
     print("\n=== agent transcript ===")
