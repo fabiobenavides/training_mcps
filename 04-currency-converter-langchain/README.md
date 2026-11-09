@@ -50,7 +50,7 @@ Use the `google_genai:` prefix. A bare `gemini-...` id can resolve to Vertex AI 
 
 Other free Flash ids to try: `google_genai:gemini-3.6-flash`, `google_genai:gemini-3.8-flash`. Older ids such as `gemini-2.5-flash` often return `404 NOT_FOUND` for new API keys.
 
-After `tools/list`, the client calls Gemini. A long pause there is the **LLM HTTP request**, not MCP. Free tier frequently returns **`503 UNAVAILABLE` (“high demand”)** or hangs until the 90s client timeout — that is Google capacity, not an MCP bug. Retry later or switch `LAB_MODEL` to another Flash/Lite model.
+After `tools/list`, the client calls Gemini. A long pause there is the **LLM HTTP request**, not MCP. Free tier frequently returns **`503 UNAVAILABLE`**, **`504 DEADLINE_EXCEEDED`**, or hits the 90s local timeout — that is Google capacity, not an MCP bug. The client prints a short `Model call failed: ...` line (no full traceback). Retry later or switch `LAB_MODEL` to another Flash/Lite model.
 
 A console line like `Key 'additionalProperties' is not supported in schema, ignoring` is harmless (Gemini drops that JSON Schema field when binding tools).
 

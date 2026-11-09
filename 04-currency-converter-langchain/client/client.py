@@ -182,29 +182,40 @@ async def main() -> None:
                 ),
                 timeout=INVOKE_TIMEOUT_SECONDS,
             )
-        except TimeoutError:
+        except TimeoutError as err:
             print(
-                f"Timed out after {INVOKE_TIMEOUT_SECONDS:.0f}s waiting for the model. "
-                "Gemini free tier is often slow or overloaded (503 / ReadTimeout). "
-                "Retry later, or try another Flash model from AI Studio "
-                "(e.g. google_genai:gemini-3.5-flash-lite).",
+                f"Model call failed (local timeout {INVOKE_TIMEOUT_SECONDS:.0f}s): {err}",
+                file=sys.stderr,
+            )
+            print(
+                "Hint: free-tier Gemini is often slow or overloaded. "
+                "Retry later, or set LAB_MODEL to another Flash model "
+                '(e.g. "google_genai:gemini-3.5-flash-lite").',
                 file=sys.stderr,
             )
             sys.exit(3)
         except Exception as err:
-            # Surface Gemini capacity errors without a huge LangGraph stack.
-            err_text = str(err)
-            if "503" in err_text or "high demand" in err_text.lower():
+            # Keep the lab output readable: one-line detail, no LangGraph stack.
+            print(f"Model call failed: {err}", file=sys.stderr)
+            err_text = str(err).lower()
+            if any(
+                token in err_text
+                for token in (
+                    "503",
+                    "504",
+                    "unavailable",
+                    "deadline_exceeded",
+                    "high demand",
+                    "resource_exhausted",
+                    "429",
+                )
+            ):
                 print(
-                    "Gemini returned 503 (high demand / free-tier overload). "
-                    "This is Google capacity, not an MCP bug. Retry later, or set "
-                    'LAB_MODEL to another free model, e.g. '
-                    '"google_genai:gemini-3.5-flash-lite" or '
-                    '"google_genai:gemini-3.6-flash".',
+                    "Hint: provider capacity/quota issue (not an MCP bug). "
+                    "Retry later or switch LAB_MODEL.",
                     file=sys.stderr,
                 )
-                sys.exit(3)
-            raise
+            sys.exit(3)
 
     messages = result.get("messages", []) if isinstance(result, dict) else []
     print("\n=== agent transcript ===")
