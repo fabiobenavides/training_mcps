@@ -1,0 +1,8 @@
+[project]
+name = "currency-converter-resources-server"
+version = "0.1.0"
+description = "FastMCP currency-converter server that exposes rates as an MCP resource file"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp",
+]
