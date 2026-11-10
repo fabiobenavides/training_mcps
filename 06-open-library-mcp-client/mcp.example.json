@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "book-finder-orchestrator": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "C:/training/training_mcps/06-open-library-mcp-client/server",
+        "python",
+        "server.py"
+      ]
+    },
+    "open-library": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "C:/training/training_mcps/06-open-library-mcp-client/open_library",
+        "python",
+        "server.py"
+      ]
+    }
+  }
+}

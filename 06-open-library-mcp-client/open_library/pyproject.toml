@@ -1,0 +1,9 @@
+[project]
+name = "open-library-mcp"
+version = "0.1.0"
+description = "FastMCP server that wraps the public Open Library Search API"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp",
+    "httpx",
+]

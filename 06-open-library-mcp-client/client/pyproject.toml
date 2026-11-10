@@ -1,0 +1,10 @@
+[project]
+name = "open-library-orchestrator-client"
+version = "0.1.0"
+description = "LangChain agent client that calls the book-finder orchestrator MCP"
+requires-python = ">=3.11"
+dependencies = [
+    "langchain[mcp]>=1.4.0",
+    "langchain-openai",
+    "langchain-google-genai>=4.4.3",
+]
