@@ -140,6 +140,13 @@ async def main() -> None:
             file=sys.stderr,
         )
         sys.exit(1)
+    if model.startswith("xai:") and not os.environ.get("XAI_API_KEY", "").strip():
+        print(
+            "XAI_API_KEY is required for xAI/Grok models. "
+            "Create a key at https://console.x.ai",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     config = _mcp_config()
     command = config["mcpServers"]["currency"]["command"]
@@ -196,9 +203,16 @@ async def main() -> None:
             sys.exit(3)
         except Exception as err:
             # Keep the lab output readable: one-line detail, no LangGraph stack.
-            print(f"Model call failed: {err}", file=sys.stderr)
-            err_text = str(err).lower()
-            if any(
+            detail = getattr(err, "body", None) or err
+            print(f"Model call failed: {detail}", file=sys.stderr)
+            err_text = str(detail).lower()
+            if "incorrect api key" in err_text or "invalid api key" in err_text:
+                print(
+                    "Hint: use an xAI key from https://console.x.ai "
+                    "(usually starts with xai-), not a Cursor/Grok app key.",
+                    file=sys.stderr,
+                )
+            elif any(
                 token in err_text
                 for token in (
                     "503",
